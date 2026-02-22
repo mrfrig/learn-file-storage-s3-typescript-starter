@@ -37,12 +37,13 @@ export async function handlerUploadThumbnail(cfg: ApiConfig, req: BunRequest) {
     throw new UserForbiddenError("Yo don't have permission to edit this video");
   }
 
-  const mediaType = file.type;
   const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-  const dataUrl = `data:${mediaType};base64,${buffer.toString("base64")}`;
+  const fileExtension = file.type.split("/")[1];
+  const path = `${cfg.assetsRoot}/${video.id}.${fileExtension}`;
+  await Bun.write(path, arrayBuffer);
+  const url = `http://localhost:${cfg.port}/assets/${video.id}.${fileExtension}`;
 
-  video.thumbnailURL = dataUrl;
+  video.thumbnailURL = url;
   updateVideo(cfg.db, video);
 
   return respondWithJSON(200, video);
