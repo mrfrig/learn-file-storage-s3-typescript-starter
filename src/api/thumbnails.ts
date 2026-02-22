@@ -34,11 +34,16 @@ export async function handlerUploadThumbnail(cfg: ApiConfig, req: BunRequest) {
   }
 
   if (userID !== video.userID) {
-    throw new UserForbiddenError("Yo don't have permission to edit this video");
+    throw new UserForbiddenError("You don't have permission to edit this video");
+  }
+
+  const mimeType = file.type;
+  if (mimeType !== "image/jpeg" && mimeType !== "image/png") {
+    throw new BadRequestError("File type needs to be jpg or png");
   }
 
   const arrayBuffer = await file.arrayBuffer();
-  const fileExtension = file.type.split("/")[1];
+  const fileExtension = mimeType.split("/")[1];
   const path = `${cfg.assetsRoot}/${video.id}.${fileExtension}`;
   await Bun.write(path, arrayBuffer);
   const url = `http://localhost:${cfg.port}/assets/${video.id}.${fileExtension}`;
