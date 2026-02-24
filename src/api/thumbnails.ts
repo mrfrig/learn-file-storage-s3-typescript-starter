@@ -4,6 +4,7 @@ import { getVideo, updateVideo } from "../db/videos";
 import type { ApiConfig } from "../config";
 import type { BunRequest } from "bun";
 import { BadRequestError, NotFoundError, UserForbiddenError } from "./errors";
+import { randomBytes } from "crypto";
 
 
 export async function handlerUploadThumbnail(cfg: ApiConfig, req: BunRequest) {
@@ -42,11 +43,12 @@ export async function handlerUploadThumbnail(cfg: ApiConfig, req: BunRequest) {
     throw new BadRequestError("File type needs to be jpg or png");
   }
 
+  const filename = randomBytes(32).toString("base64url");
   const arrayBuffer = await file.arrayBuffer();
   const fileExtension = mimeType.split("/")[1];
-  const path = `${cfg.assetsRoot}/${video.id}.${fileExtension}`;
+  const path = `${cfg.assetsRoot}/${filename}.${fileExtension}`;
   await Bun.write(path, arrayBuffer);
-  const url = `http://localhost:${cfg.port}/assets/${video.id}.${fileExtension}`;
+  const url = `http://localhost:${cfg.port}/assets/${filename}.${fileExtension}`;
 
   video.thumbnailURL = url;
   updateVideo(cfg.db, video);
