@@ -2,7 +2,7 @@ import { type BunRequest } from "bun";
 import { randomBytes } from "crypto";
 import { getBearerToken, validateJWT } from "../auth";
 import { type ApiConfig } from "../config";
-import { getVideo, updateVideo } from "../db/videos";
+import { getVideo, updateVideo, type Video } from "../db/videos";
 import { BadRequestError, NotFoundError, UserForbiddenError } from "./errors";
 import { respondWithJSON } from "./json";
 
@@ -60,14 +60,14 @@ export async function handlerUploadVideo(cfg: ApiConfig, req: BunRequest) {
   await bucket.write(tempOutputFile, {
     type: mimeType,
   });
-  const url = `https://${cfg.s3Bucket}.s3.${cfg.s3Region}.amazonaws.com/${key}`;
+  const url = `${key}`;
 
   video.videoURL = url;
   updateVideo(cfg.db, video);
 
   await tempOutputFile.delete();
 
-  return respondWithJSON(200, video);
+  return respondWithJSON(200, dbVideoToSignedVideo(cfg, video));
 }
 
 async function getVideoAspectRatio(filePath: string) {
@@ -140,4 +140,17 @@ async function processVideoForFastStart(inputFilePath: string) {
   }
 
   return outputFilePath;
+}
+
+export function dbVideoToSignedVideo(cfg: ApiConfig, video: Video) {
+  if (!video.videoURL) throw new Error("Video url missing");
+
+  video.videoURL = generatePresignedURL(cfg, video.videoURL, 3600);
+  return video;
+}
+
+function generatePresignedURL(cfg: ApiConfig, key: string, expireTime: number) {
+  return cfg.s3Client.presign(key, {
+    expiresIn: expireTime,
+  });
 }
