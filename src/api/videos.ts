@@ -60,14 +60,14 @@ export async function handlerUploadVideo(cfg: ApiConfig, req: BunRequest) {
   await bucket.write(tempOutputFile, {
     type: mimeType,
   });
-  const url = `${key}`;
+  const url = `https://${cfg.s3CfDistribution}/${key}`;
 
   video.videoURL = url;
   updateVideo(cfg.db, video);
 
   await tempOutputFile.delete();
 
-  return respondWithJSON(200, dbVideoToSignedVideo(cfg, video));
+  return respondWithJSON(200, video);
 }
 
 async function getVideoAspectRatio(filePath: string) {
@@ -140,17 +140,4 @@ async function processVideoForFastStart(inputFilePath: string) {
   }
 
   return outputFilePath;
-}
-
-export function dbVideoToSignedVideo(cfg: ApiConfig, video: Video) {
-  if (!video.videoURL) throw new Error("Video url missing");
-
-  video.videoURL = generatePresignedURL(cfg, video.videoURL, 3600);
-  return video;
-}
-
-function generatePresignedURL(cfg: ApiConfig, key: string, expireTime: number) {
-  return cfg.s3Client.presign(key, {
-    expiresIn: expireTime,
-  });
 }
